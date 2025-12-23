@@ -1,0 +1,8 @@
+model:
+  type: classical
+  num_layers: 3
+  hidden_dim: 64
+training:
+  lr: 1e-3
+  epochs: 100
+

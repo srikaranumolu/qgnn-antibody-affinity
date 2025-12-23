@@ -1,0 +1,7 @@
+model:
+  type: quantum
+  num_qubits: 4
+training:
+  lr: 1e-4
+  epochs: 50
+

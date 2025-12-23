@@ -1,0 +1,106 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Virtualenvs
+venv/
+ENV/
+env/
+.venv/
+venv.bak/
+
+# Pyenv
+.python-version
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# VS Code
+.vscode/
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Data directories (large/binary) - typically not checked in
+data/raw/
+data/processed/
+data/splits/
+
+# Binding affinities and dataset dumps (if you prefer keeping small metadata, remove this)
+data/binding_affinities.csv
+data/dataset_statistics.json
+
+# Model checkpoints and weights
+models/*/checkpoints/
+*.pth
+*.pt
+*.ckpt
+
+# Results and figures
+results/
+
+# Misc
+.env
+.env.*
+.local/
+
+# Python packaging
+pip-wheel-metadata/
+
+# Ignore generated protocol buffers, caches, and other build artifacts
+*.proto
+*.pyc
+
+# Keep a placeholder file in directories you want in-git by adding a .gitkeep in the repo (not ignored)
+# Example: To retain an empty data/raw folder in the repo, add data/raw/.gitkeep and remove data/raw/ from this file.

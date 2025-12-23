@@ -1,0 +1,10 @@
+torch
+numpy
+pandas
+biopython
+matplotlib
+scikit-learn
+pytest
+jsonschema
+qiskit
+

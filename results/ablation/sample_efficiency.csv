@@ -1,0 +1,28 @@
+samples,rmse
+100,0.6
+1000,0.4
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.env
+
+# Data
+data/raw/
+data/processed/
+results/
+
+# Models
+models/*/checkpoints/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Misc
+*.log
+*.pth
+.DS_Store
+
