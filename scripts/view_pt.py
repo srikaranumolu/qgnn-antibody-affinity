@@ -4,7 +4,9 @@ View what's inside a .pt file
 import torch
 
 # Load the .pt file
-graph = torch.load('../data/processed/example/1a2y_graph.pt')
+graph = torch.load('../data/processed/example/1a2y_graph.pt',
+                   map_location='cpu',
+                   weights_only=False)
 
 print("=" * 70)
 print("VIEWING 1A2Y_GRAPH.PT FILE")

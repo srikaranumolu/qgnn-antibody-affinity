@@ -7,7 +7,9 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 # Load graph
-graph = torch.load('../data/processed/example/1a2y_graph.pt')
+graph = torch.load('../data/processed/example/1a2y_graph.pt',
+                   map_location='cpu',
+                   weights_only=False)
 
 print(f"Loaded graph: {graph.num_nodes} atoms")
 
@@ -51,7 +53,7 @@ legend_elements = [Line2D([0], [0], marker='o', color='w',
 ax.legend(handles=legend_elements, loc='upper right')
 
 plt.tight_layout()
-save_path = '../results/3d_molecular_structure.png'
+save_path = '../results/figures/3d_molecular_structure.png'
 plt.savefig(save_path, dpi=200, bbox_inches='tight')
 print(f"✓ Saved to: {save_path}")
 

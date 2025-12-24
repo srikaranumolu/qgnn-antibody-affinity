@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 print("Loading graph...")
-graph = torch.load('../data/processed/example/1a2y_graph.pt')
+graph = torch.load('../data/processed/example/1a2y_graph.pt',
+                   map_location='cpu',
+                   weights_only=False)
 
 print(f"Graph size: {graph.num_nodes} nodes, {graph.num_edges} edges")
 print("⚠️  WARNING: This will take 2-5 minutes and look like a blob!\n")
@@ -46,6 +48,6 @@ plt.title(f"Full Molecular Graph: 1A2Y (ALL {graph.num_nodes} atoms)",
 plt.axis('off')
 plt.tight_layout()
 
-save_path = '../results/full_molecular_graph.png'
+save_path = '../results/figures/full_molecular_graph.png'
 plt.savefig(save_path, dpi=300, bbox_inches='tight')
 print(f"\n✓ Saved to: {save_path}")
