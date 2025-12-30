@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 # Load graph
-graph = torch.load('../data/processed/example/1a2y_graph.pt',
+graph = torch.load('../data/processed/6a0z_model_0_graph.pt',
                    map_location='cpu',
                    weights_only=False)
 

@@ -51,11 +51,11 @@ def inspect_pdb(pdb_file):
 if __name__ == "__main__":
     # Test on all 5 downloaded PDB files
     pdb_files = [
-        '../data/raw/example/1a2y.pdb',
-        '../data/raw/example/1fbi.pdb',
-        '../data/raw/example/1dqj.pdb',
-        '../data/raw/example/1fns.pdb',
-        '../data/raw/example/1bj1.pdb'
+        '../data/raw/saaint_selected_pdbs/6a0z_model_0.pdb',
+        '../data/raw/saaint_selected_pdbs/6a3w_model_0.pdb',
+        '../data/raw/saaint_selected_pdbs/6a67_model_0.pdb',
+        '../data/raw/saaint_selected_pdbs/6a78_model_0.pdb',
+        '../data/raw/saaint_selected_pdbs/6a79_model_0.pdb',
     ]
 
     print("INSPECTING ALL PDB FILES")

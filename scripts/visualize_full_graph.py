@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 print("Loading graph...")
-graph = torch.load('../data/processed/example/1a2y_graph.pt',
+graph = torch.load('../data/processed/6a0z_model_0_graph.pt',
                    map_location='cpu',
                    weights_only=False)
 
