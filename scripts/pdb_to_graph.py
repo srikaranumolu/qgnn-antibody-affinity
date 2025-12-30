@@ -113,9 +113,10 @@ if __name__ == "__main__":
         ids = ["../data/raw/saaint_selected_pdbs/" + line.strip() + "_model_0.pdb" for line in pdbs.readlines() if line.strip()]
 
     start = 0
-    end = (len(ids)//2)+2
+    end = (len(ids)//2) + 1
     pdb_files = ids[start:end]
-    print(f"Using ids {start}:{end} (actual {len(pdb_files)}) from `{pdb_ids}` out of the total {len(ids)}")
+
+    print(f"Using ids {start}:{end} (actual {len(pdb_files)}) from `{pdb_ids}` out of the total {len(ids)} with the last file that will be processed being: {pdb_files[-1]}")
 
     print("=" * 70)
     print("CONVERTING PDB FILES TO GRAPHS")
