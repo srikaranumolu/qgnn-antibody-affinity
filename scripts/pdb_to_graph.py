@@ -108,14 +108,14 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import networkx as nx
 
-    # Test on your 5 PDB files
-    pdb_files = [
-        '../data/raw/saaint_selected_pdbs/6a0z_model_0.pdb',
-        '../data/raw/saaint_selected_pdbs/6a3w_model_0.pdb',
-        '../data/raw/saaint_selected_pdbs/6a67_model_0.pdb',
-        '../data/raw/saaint_selected_pdbs/6a78_model_0.pdb',
-        '../data/raw/saaint_selected_pdbs/6a79_model_0.pdb',
-    ]
+    pdb_ids = '../data/pdb_ids.txt'
+    with open(pdb_ids, 'r') as pdbs:
+        ids = ["../data/raw/saaint_selected_pdbs/" + line.strip() + "_model_0.pdb" for line in pdbs.readlines() if line.strip()]
+
+    start = 0
+    end = (len(ids)//2)+2
+    pdb_files = ids[start:end]
+    print(f"Using ids {start}:{end} (actual {len(pdb_files)}) from `{pdb_ids}` out of the total {len(ids)}")
 
     print("=" * 70)
     print("CONVERTING PDB FILES TO GRAPHS")
