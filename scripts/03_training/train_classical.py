@@ -59,8 +59,8 @@ def train():
     print("TRAINING CLASSICAL GNN")
     print("=" * 70)
 
-    # Load config
-    with open("configs/classical_config.yaml") as f:
+    config_path = os.path.join(PROJECT_ROOT, "configs", "classical_config.yaml")
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     # Extract hyperparameters
@@ -74,11 +74,11 @@ def train():
     patience = config["training"]["patience"]
     weight_decay = config["training"]["weight_decay"]
 
-    train_csv = config["paths"]["train_csv"]
-    val_csv = config["paths"]["val_csv"]
-    test_csv = config["paths"]["test_csv"]
-    save_dir = config["paths"]["save_dir"]
-    metrics_dir = config["paths"]["metrics_dir"]
+    train_csv = os.path.join(PROJECT_ROOT, config["paths"]["train_csv"])
+    val_csv = os.path.join(PROJECT_ROOT, config["paths"]["val_csv"])
+    test_csv = os.path.join(PROJECT_ROOT, config["paths"]["test_csv"])
+    save_dir = os.path.join(PROJECT_ROOT, config["paths"]["save_dir"])
+    metrics_dir = os.path.join(PROJECT_ROOT, config["paths"]["metrics_dir"])
 
     # Setup device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
