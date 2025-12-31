@@ -147,7 +147,7 @@ if __name__ == "__main__":
     print("=" * 70)
 
     results = []
-    graph_objects = []  # Store graphs for visualization
+    graph_objects = []  # Store graphs for 05_visualization
 
     # Use absolute output directories based on PROJECT_ROOT
     processed_dir = os.path.join(PROJECT_ROOT, 'data', 'processed')
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     print("CREATING VISUALIZATION")
     print("=" * 70)
 
-    # Use first graph for visualization (if available)
+    # Use first graph for 05_visualization (if available)
     if not graph_objects:
         print("No graphs to visualize.")
     else:
@@ -234,7 +234,7 @@ if __name__ == "__main__":
 
         print(f"Sample graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
 
-        # Create visualization
+        # Create 05_visualization
         plt.figure(figsize=(12, 12))
 
         # Use spring layout for nice positioning

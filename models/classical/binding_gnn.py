@@ -1,3 +1,6 @@
+"""
+Classical Graph Neural Network for antibody-antigen binding affinity prediction
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,7 +9,7 @@ from torch_geometric.nn import GCNConv, global_mean_pool
 
 class BindingAffinityGNN(nn.Module):
     """
-    Graph Neural Network for predicting antibody-antigen binding affinity
+    Graph Neural Network for predicting antibody-antigen binding affinity (pKd)
     """
 
     def __init__(self, input_dim=6, hidden_dim=128, dropout=0.3):
@@ -20,8 +23,13 @@ class BindingAffinityGNN(nn.Module):
 
         # Graph convolutional layers
         self.conv1 = GCNConv(input_dim, hidden_dim)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
+
         self.conv2 = GCNConv(hidden_dim, hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
+
         self.conv3 = GCNConv(hidden_dim, hidden_dim)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
 
         # Fully connected layers
         self.fc1 = nn.Linear(hidden_dim, 64)
@@ -35,7 +43,7 @@ class BindingAffinityGNN(nn.Module):
         Forward pass
 
         Args:
-            data: PyTorch Geometric Data object with:
+            data: PyTorch Geometric Batch object with:
                 - data.x: Node features [num_nodes, input_dim]
                 - data.edge_index: Edge connections [2, num_edges]
                 - data.batch: Batch assignment [num_nodes]
@@ -45,25 +53,27 @@ class BindingAffinityGNN(nn.Module):
         """
         x, edge_index, batch = data.x, data.edge_index, data.batch
 
-        # Graph convolution 1
+        # GCN Layer 1
         x = self.conv1(x, edge_index)
+        x = self.bn1(x)
         x = F.relu(x)
         x = self.dropout(x)
 
-        # Graph convolution 2
+        # GCN Layer 2
         x = self.conv2(x, edge_index)
+        x = self.bn2(x)
         x = F.relu(x)
         x = self.dropout(x)
 
-        # Graph convolution 3
+        # GCN Layer 3
         x = self.conv3(x, edge_index)
+        x = self.bn3(x)
         x = F.relu(x)
 
-        # Global pooling: aggregate all node features
-        # Output: [batch_size, hidden_dim]
+        # Global pooling: [num_nodes, hidden_dim] -> [batch_size, hidden_dim]
         x = global_mean_pool(x, batch)
 
-        # Fully connected layer 1
+        # FC Layer 1
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout(x)
@@ -78,35 +88,23 @@ class BindingAffinityGNN(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
-# Test the model
+# Test
 if __name__ == "__main__":
-    print("Testing BindingAffinityGNN model...\n")
+    print("Testing BindingAffinityGNN...\n")
 
-    # Create model
-    model = BindingAffinityGNN(input_dim=6, hidden_dim=128)
+    model = BindingAffinityGNN(input_dim=6, hidden_dim=128, dropout=0.3)
     print(model)
     print(f"\nTotal parameters: {model.count_parameters():,}")
 
-    # Create dummy data
+    # Create dummy batch
     from torch_geometric.data import Data, Batch
 
-    # Dummy graph 1: 10 nodes
-    x1 = torch.randn(10, 6)
-    edge_index1 = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 4]], dtype=torch.long)
-    data1 = Data(x=x1, edge_index=edge_index1)
-
-    # Dummy graph 2: 15 nodes
-    x2 = torch.randn(15, 6)
-    edge_index2 = torch.tensor([[0, 1, 2], [1, 2, 3]], dtype=torch.long)
-    data2 = Data(x=x2, edge_index=edge_index2)
-
-    # Create batch
+    data1 = Data(x=torch.randn(100, 6), edge_index=torch.randint(0, 100, (2, 200)))
+    data2 = Data(x=torch.randn(150, 6), edge_index=torch.randint(0, 150, (2, 300)))
     batch = Batch.from_data_list([data1, data2])
 
-    # Forward pass
     output = model(batch)
-    print(f"\nInput: Batch of 2 graphs (10 and 15 nodes)")
-    print(f"Output shape: {output.shape}")  # Should be [2, 1]
+    print(f"\nInput: Batch of 2 graphs")
+    print(f"Output shape: {output.shape}")  # [2, 1]
     print(f"Predictions: {output.squeeze().tolist()}")
-
     print("\n✓ Model works!")

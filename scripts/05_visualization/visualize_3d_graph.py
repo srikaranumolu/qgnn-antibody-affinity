@@ -1,5 +1,5 @@
 """
-3D visualization using actual atom positions
+3D 05_visualization using actual atom positions
 """
 import torch
 import matplotlib.pyplot as plt
