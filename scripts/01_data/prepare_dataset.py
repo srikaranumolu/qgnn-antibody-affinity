@@ -1,19 +1,43 @@
 """
-Prepare SAAINT-DB data - FIXED to handle < values
+prepare_dataset.py
+
+Prepare SAAINT-DB dataset for antibody-antigen binding affinity prediction.
+
+This script:
+1. Loads SAAINT-DB affinity and structure data
+2. Filters for high-quality structures (resolution ≤ 3.0 Å)
+3. Parses binding affinity values (handles < and > limits)
+4. Matches structures with affinity measurements
+5. Outputs cleaned dataset and PDB ID list
+
+Input:
+    - saaintdb_20251121_all.xlsx: Full SAAINT-DB structure database
+    - saaintdb_affinity_all.tsv: Binding affinity measurements
+
+Output:
+    - saaint_cleaned_final.csv: Filtered dataset with affinity labels
+    - pdb_ids_to_download.txt: List of PDB IDs for download
+
+Usage:
+    python prepare_dataset.py
+
+Author: Srikar Anumolu & Sayuon Biju
+Date: December 2025
+Project: Quantum GNNs for Antibody-Antigen Binding Prediction
 """
+
 import pandas as pd
 import numpy as np
-import re
 
 print("="*70)
-print("PREPARING SAAINT-DB DATA (FIXED VERSION)")
+print("PREPARING SAAINT-DB DATA")
 print("="*70)
 
 # File paths
-main_file = "../data/raw/saaintdb_20251121_all.xlsx"
-affinity_file = "../data/raw/saaintdb_affinity_all.tsv"
-output_file = "../data/saaint_cleaned.csv"
-pdb_list_file = "../data/pdb_ids.txt"
+main_file = "../../data/raw/saaintdb_20251121_all.xlsx"
+affinity_file = "../../data/raw/saaintdb_affinity_all.tsv"
+output_file = "../../data/saaint_cleaned.csv"
+pdb_list_file = "../../data/pdb_ids.txt"
 
 # Step 1: Load files
 print("\n[1/10] Loading main database...")
@@ -76,7 +100,7 @@ print(f"       Failed to parse: {affinity_df_clean['Kd_nM_parsed'].isna().sum()}
 # Show examples of what couldn't parse
 if affinity_df_clean['Kd_nM_parsed'].isna().sum() > 0:
     print(f"\n       Examples of values that couldn't parse:")
-    failed = affinity_df_clean[affinity_df_clean['Kd_nM_parsed'].isna()]['Affinity_KD(nM)'].head(20)
+    failed = affinity_df_clean[affinity_df_clean['Kd_nM_parsed'].isna()]['Affinity_KD(nM)'].head(5)
     for val in failed:
         print(f"         '{val}'")
 

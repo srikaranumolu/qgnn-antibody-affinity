@@ -1,7 +1,17 @@
 """
-Simple script to inspect PDB files
-"""
+PDB Structure Inspection Tool
+==============================
+Research-grade utility for analyzing antibody-antigen complex structures.
 
+This module provides tools for systematic inspection of Protein Data Bank (PDB)
+files, with particular focus on antibody-antigen complexes from the SAAINT
+database. It extracts structural information including chain composition,
+atomic coordinates, and validation metrics.
+
+Author: RSEF Quantum Antibody Binding Project
+Version: 1.0.0
+Date: December 2024
+"""
 from Bio.PDB import PDBParser
 import sys
 
