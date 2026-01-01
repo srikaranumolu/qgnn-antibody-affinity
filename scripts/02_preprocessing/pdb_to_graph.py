@@ -1,5 +1,6 @@
 """
-Convert PDB file to PyTorch Geometric graph
+Convert PDB file to PyTorch Geometric graph with RICH MOLECULAR FEATURES
+Updated version with 41-dimensional node features for binding affinity prediction
 """
 
 import torch
@@ -9,21 +10,110 @@ import numpy as np
 import os
 
 
+# ==============================================================================
+# FEATURE DEFINITIONS
+# ==============================================================================
+
+# Element types (6D one-hot)
+ELEMENT_TYPES = ['C', 'N', 'O', 'S', 'P', 'Other']
+
+# Common atom types in proteins (10D one-hot)
+ATOM_TYPES = ['CA', 'C', 'N', 'O', 'CB', 'CG', 'CD', 'CE', 'NZ', 'Other']
+
+# Amino acid types (20D one-hot)
+AMINO_ACIDS = [
+    'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE',
+    'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL'
+]
+
+# Aromatic residues
+AROMATIC_RESIDUES = {'PHE', 'TRP', 'TYR', 'HIS'}
+
+# Backbone atoms
+BACKBONE_ATOMS = {'N', 'CA', 'C', 'O'}
+
+# Hydrogen bond donors (atoms that can donate H)
+HB_DONORS = {'N', 'O', 'OG', 'OG1', 'OH', 'NE', 'NH1', 'NH2', 'NZ', 'ND1', 'ND2', 'NE2'}
+
+# Hydrogen bond acceptors (atoms that can accept H)
+HB_ACCEPTORS = {'O', 'OD1', 'OD2', 'OE1', 'OE2', 'OG', 'OG1', 'OH', 'N'}
+
+# Charged residues
+CHARGED_POSITIVE = {'ARG', 'LYS', 'HIS'}
+CHARGED_NEGATIVE = {'ASP', 'GLU'}
+
+
 def calculate_distance(coord1, coord2):
     """Calculate Euclidean distance between two 3D points"""
     return np.sqrt(np.sum((coord1 - coord2) ** 2))
 
 
+def get_element_features(element):
+    """Convert element to 6D one-hot encoding"""
+    idx = ELEMENT_TYPES.index(element) if element in ELEMENT_TYPES else ELEMENT_TYPES.index('Other')
+    one_hot = [0] * len(ELEMENT_TYPES)
+    one_hot[idx] = 1
+    return one_hot
+
+
+def get_atom_type_features(atom_name):
+    """Convert atom name to 10D one-hot encoding"""
+    idx = ATOM_TYPES.index(atom_name) if atom_name in ATOM_TYPES else ATOM_TYPES.index('Other')
+    one_hot = [0] * len(ATOM_TYPES)
+    one_hot[idx] = 1
+    return one_hot
+
+
+def get_residue_features(residue_name):
+    """Convert residue to 20D one-hot encoding"""
+    idx = AMINO_ACIDS.index(residue_name) if residue_name in AMINO_ACIDS else -1
+    one_hot = [0] * len(AMINO_ACIDS)
+    if idx != -1:
+        one_hot[idx] = 1
+    return one_hot
+
+
+def get_additional_features(atom_name, residue_name):
+    """
+    Get additional binary/continuous features (5D total)
+    Returns: [is_aromatic, is_backbone, is_hb_donor, is_hb_acceptor, charge]
+    """
+    is_aromatic = 1.0 if residue_name in AROMATIC_RESIDUES else 0.0
+    is_backbone = 1.0 if atom_name in BACKBONE_ATOMS else 0.0
+    is_hb_donor = 1.0 if atom_name in HB_DONORS else 0.0
+    is_hb_acceptor = 1.0 if atom_name in HB_ACCEPTORS else 0.0
+
+    # Charge indicator: +1 for positive, -1 for negative, 0 for neutral
+    if residue_name in CHARGED_POSITIVE:
+        charge = 1.0
+    elif residue_name in CHARGED_NEGATIVE:
+        charge = -1.0
+    else:
+        charge = 0.0
+
+    return [is_aromatic, is_backbone, is_hb_donor, is_hb_acceptor, charge]
+
+
 def pdb_to_graph(pdb_file, distance_cutoff=5.0):
     """
-    Convert PDB file to graph
+    Convert PDB file to graph with rich molecular features
+
+    Node features (41D total):
+    - Element type: 6D one-hot (C, N, O, S, P, Other)
+    - Atom type: 10D one-hot (CA, C, N, O, CB, etc.)
+    - Residue type: 20D one-hot (20 amino acids)
+    - Is aromatic: 1D binary
+    - Is backbone: 1D binary
+    - Is HB donor: 1D binary
+    - Is HB acceptor: 1D binary
+    - Charge: 1D continuous (-1, 0, +1)
 
     Args:
         pdb_file: Path to PDB file
         distance_cutoff: Connect atoms within this distance (Angstroms)
 
     Returns:
-        PyTorch Geometric Data object
+        PyTorch Geometric Data object with rich features
     """
     print(f"\nProcessing: {pdb_file}")
 
@@ -31,65 +121,82 @@ def pdb_to_graph(pdb_file, distance_cutoff=5.0):
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure('complex', pdb_file)
 
-    # Extract all atoms
+    # Extract all atoms with residue information
     atoms = []
     for atom in structure.get_atoms():
+        residue = atom.get_parent()
         atoms.append({
             'element': atom.element,
+            'atom_name': atom.name,
+            'residue_name': residue.resname,
             'coord': atom.get_coord()
         })
 
     print(f"  Loaded {len(atoms)} atoms")
 
-    # Define element types for one-hot encoding
-    element_types = ['C', 'N', 'O', 'S', 'P', 'Other']
-    element_to_idx = {e: i for i, e in enumerate(element_types)}
-
-    # Create node features
+    # Create rich node features (41D)
     node_features = []
     positions = []
 
     for atom in atoms:
         element = atom['element']
+        atom_name = atom['atom_name']
+        residue_name = atom['residue_name']
 
-        # Map to element type
-        if element not in element_to_idx:
-            element = 'Other'
-        idx = element_to_idx[element]
+        # Build 41D feature vector
+        features = []
 
-        # One-hot encode: [0,0,1,0,0,0] for O (oxygen)
-        one_hot = [0] * len(element_types)
-        one_hot[idx] = 1
+        # Element features (6D)
+        features.extend(get_element_features(element))
 
-        node_features.append(one_hot)
+        # Atom type features (10D)
+        features.extend(get_atom_type_features(atom_name))
+
+        # Residue features (20D)
+        features.extend(get_residue_features(residue_name))
+
+        # Additional features (5D)
+        features.extend(get_additional_features(atom_name, residue_name))
+
+        node_features.append(features)
         positions.append(atom['coord'])
 
-    # Convert to tensors
-    x = torch.tensor(node_features, dtype=torch.float)
-    pos = torch.tensor(positions, dtype=torch.float)
+    # Convert to tensors efficiently (numpy first, then torch)
+    x = torch.from_numpy(np.array(node_features, dtype=np.float32))
+    pos = torch.from_numpy(np.array(positions, dtype=np.float32))
 
-    print(f"  Node features shape: {x.shape}")
+    print(f"  Node features shape: {x.shape} (41D per node)")
+    print(f"  Feature breakdown: 6D element + 10D atom + 20D residue + 5D properties")
 
-    # Create edges - connect atoms within distance_cutoff
+    # Create edges - connect atoms within distance_cutoff (OPTIMIZED)
     print(f"  Creating edges (cutoff={distance_cutoff}Å)...")
 
-    edge_list = []
+    # Convert positions to numpy array for vectorized operations
+    pos_array = np.array(positions, dtype=np.float32)
     num_atoms = len(positions)
 
-    # Progress tracking
-    progress_interval = max(num_atoms // 10, 1)
+    edge_list = []
 
-    for i in range(num_atoms):
-        if i % progress_interval == 0:
+    # Use vectorized distance calculations in chunks to save memory
+    chunk_size = 1000
+    for i in range(0, num_atoms, chunk_size):
+        end_i = min(i + chunk_size, num_atoms)
+
+        if i % (chunk_size * 5) == 0:
             print(f"    Progress: {i}/{num_atoms} atoms ({100 * i // num_atoms}%)")
 
-        for j in range(i + 1, num_atoms):
-            dist = calculate_distance(positions[i], positions[j])
+        # Calculate distances for chunk
+        for idx in range(i, end_i):
+            # Vectorized distance calculation to all subsequent atoms
+            distances = np.linalg.norm(pos_array[idx+1:] - pos_array[idx], axis=1)
 
-            if dist < distance_cutoff:
-                # Undirected graph - add both directions
-                edge_list.append([i, j])
-                edge_list.append([j, i])
+            # Find atoms within cutoff
+            neighbors = np.where(distances < distance_cutoff)[0] + (idx + 1)
+
+            # Add edges (both directions for undirected graph)
+            for j in neighbors:
+                edge_list.append([idx, j])
+                edge_list.append([j, idx])
 
     print(f"  ✓ Created {len(edge_list)} edges")
 
@@ -102,6 +209,11 @@ def pdb_to_graph(pdb_file, distance_cutoff=5.0):
     # Create PyTorch Geometric Data object
     data = Data(x=x, edge_index=edge_index, pos=pos)
 
+    # Sanity check
+    print(f"  Feature stats:")
+    print(f"    Mean: {x.mean(dim=0)[:10].tolist()}")  # First 10 dims
+    print(f"    Unique feature vectors: {torch.unique(x, dim=0).shape[0]}")
+
     return data
 
 
@@ -110,7 +222,7 @@ if __name__ == "__main__":
     import networkx as nx
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
+    PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 
     pdb_ids = os.path.join(PROJECT_ROOT, "data", "pdb_ids.txt")
 
@@ -127,45 +239,48 @@ if __name__ == "__main__":
             if line.strip()
         ]
 
-    # Simple hard-coded slice (edit these to change which subset is processed)
-    # Set start/end here. `start` is inclusive, `end` is exclusive (Python slice semantics).
-    # Example: start=0, end=353 will process the first 353 entries (indices 0..352).
-    start = 664
-    end = len(ids)
+    # ========================================================================
+    # CONFIGURE RANGE HERE - Split work between you and your partner!
+    # ========================================================================
+    # Example splits for 705 files:
+    # Partner 1: start=0,   end=353  (first half)
+    # Partner 2: start=353, end=705  (second half)
+    # ========================================================================
 
-    # Safety clamp so we don't go past available ids
+    start = 0      # ← CHANGE THIS
+    end = 5 # ← CHANGE THIS (or use len(ids) for all remaining)
+
+    # Safety checks
     end = min(end, len(ids))
     start = max(0, min(start, end))
 
     pdb_files = ids[start:end]
 
     last_file_basename = os.path.basename(pdb_files[-1]) if pdb_files else 'N/A'
-    print(f"Using ids {start}:{end} (actual {len(pdb_files)}) from `{pdb_ids}` out of the total {len(ids)} with the last file that will be processed being: {last_file_basename}")
+    print(f"Processing {len(pdb_files)} files from {start} to {end}")
+    print(f"Last file: {last_file_basename}")
 
     print("=" * 70)
-    print("CONVERTING PDB FILES TO GRAPHS")
+    print("CONVERTING PDB FILES TO GRAPHS WITH RICH FEATURES")
     print("=" * 70)
 
     results = []
-    graph_objects = []  # Store graphs for 05_visualization
+    graph_objects = []
 
-    # Use absolute output directories based on PROJECT_ROOT
     processed_dir = os.path.join(PROJECT_ROOT, 'data', 'processed')
     figures_dir = os.path.join(PROJECT_ROOT, 'results', 'figures')
 
-    # Ensure output directories exist
     os.makedirs(processed_dir, exist_ok=True)
     os.makedirs(figures_dir, exist_ok=True)
 
     for pdb_file in pdb_files:
         try:
-            # Convert to graph
+            # Convert to graph with rich features
             graph = pdb_to_graph(pdb_file, distance_cutoff=5.0)
 
-            # Get PDB ID (basename, cross-platform)
             pdb_id = os.path.basename(pdb_file).replace('.pdb', '')
 
-            # SAVE THE GRAPH using absolute path
+            # Save graph
             save_path = os.path.join(processed_dir, f'{pdb_id}_graph.pt')
             torch.save(graph, save_path)
             print(f"  💾 Saved to: {save_path}")
@@ -174,12 +289,13 @@ if __name__ == "__main__":
                 'pdb_id': pdb_id,
                 'num_nodes': graph.num_nodes,
                 'num_edges': graph.num_edges,
+                'feature_dim': graph.x.shape[1],
                 'status': '✓ SUCCESS'
             }
             results.append(result)
-            graph_objects.append((pdb_id, graph))  # Store for viz
+            graph_objects.append((pdb_id, graph))
 
-            print(f"  ✓ Graph saved: {graph.num_nodes} nodes, {graph.num_edges} edges\n")
+            print(f"  ✓ Graph saved: {graph.num_nodes} nodes, {graph.num_edges} edges, {graph.x.shape[1]}D features\n")
 
         except Exception as e:
             print(f"  ✗ FAILED: {e}\n")
@@ -188,104 +304,24 @@ if __name__ == "__main__":
                 'status': f'✗ FAILED: {e}'
             })
 
-    # Summary table
+    # Summary
     print("\n" + "=" * 70)
     print("SUMMARY")
     print("=" * 70)
-    print(f"{'PDB ID':<10} {'Nodes':<10} {'Edges':<12} {'Status':<20}")
+    print(f"{'PDB ID':<12} {'Nodes':<8} {'Edges':<10} {'Features':<10} {'Status':<20}")
     print("-" * 70)
 
     for r in results:
         nodes = r.get('num_nodes', 'N/A')
         edges = r.get('num_edges', 'N/A')
-        print(f"{r['pdb_id']:<10} {nodes:<10} {edges:<12} {r['status']:<20}")
+        feat_dim = r.get('feature_dim', 'N/A')
+        print(f"{r['pdb_id']:<12} {nodes:<8} {edges:<10} {feat_dim:<10} {r['status']:<20}")
 
-    print(f"\n✓ Conversion complete! Graphs saved to {processed_dir}")
+    print(f"\n✓ Conversion complete! Graphs with 41D features saved to {processed_dir}")
 
-    # ============================================================
-    # VISUALIZATION - Sample the smallest graph
-    # ============================================================
-    print("\n" + "=" * 70)
-    print("CREATING VISUALIZATION")
-    print("=" * 70)
-
-    # Use first graph for 05_visualization (if available)
-    if not graph_objects:
-        print("No graphs to visualize.")
-    else:
+    # Simple visualization (optional)
+    if graph_objects:
+        print("\nFirst graph feature check:")
         pdb_id, graph = graph_objects[0]
-        print(f"Visualizing {pdb_id} (first 150 atoms)...")
-
-        # Sample first 150 nodes (full graph too big)
-        sample_size = min(150, graph.num_nodes)
-
-        # Get edges that connect nodes within sample
-        edge_index = graph.edge_index.numpy()
-        mask = (edge_index[0] < sample_size) & (edge_index[1] < sample_size)
-        sampled_edges = edge_index[:, mask]
-
-        # Create NetworkX graph
-        G = nx.Graph()
-        G.add_nodes_from(range(sample_size))
-
-        # Add edges
-        for i in range(sampled_edges.shape[1]):
-            G.add_edge(sampled_edges[0, i], sampled_edges[1, i])
-
-        print(f"Sample graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
-
-        # Create 05_visualization
-        plt.figure(figsize=(12, 12))
-
-        # Use spring layout for nice positioning
-        pos = nx.spring_layout(G, k=0.5, iterations=50, seed=42)
-
-        # Draw nodes
-        nx.draw_networkx_nodes(G, pos,
-                               node_size=30,
-                               node_color='lightblue',
-                               alpha=0.8)
-
-        # Draw edges
-        nx.draw_networkx_edges(G, pos,
-                               edge_color='gray',
-                               alpha=0.3,
-                               width=0.5)
-
-        plt.title(f"Molecular Graph: {pdb_id.upper()} (first {sample_size} atoms)",
-                  fontsize=16, fontweight='bold')
-        plt.axis('off')
-        plt.tight_layout()
-
-        # Save figure using absolute path
-        viz_path = os.path.join(figures_dir, 'sample_molecular_graph.png')
-        plt.savefig(viz_path, dpi=150, bbox_inches='tight')
-        print(f"✓ Visualization saved to: {viz_path}")
-
-        # Also create a statistics plot
-        plt.figure(figsize=(10, 6))
-
-        pdb_ids = [r['pdb_id'] for r in results if 'num_nodes' in r]
-        node_counts = [r['num_nodes'] for r in results if 'num_nodes' in r]
-        edge_counts = [r['num_edges'] for r in results if 'num_nodes' in r]
-
-        x = range(len(pdb_ids))
-        width = 0.35
-
-        plt.bar([i - width / 2 for i in x], node_counts, width, label='Nodes', alpha=0.8)
-        plt.bar([i + width / 2 for i in x], [e / 20 for e in edge_counts], width,
-                label='Edges/20', alpha=0.8)
-
-        plt.xlabel('PDB Structure', fontweight='bold')
-        plt.ylabel('Count', fontweight='bold')
-        plt.title('Graph Sizes for Each Structure', fontsize=14, fontweight='bold')
-        plt.xticks(x, pdb_ids)
-        plt.legend()
-        plt.grid(axis='y', alpha=0.3)
-        plt.tight_layout()
-
-        stats_path = os.path.join(figures_dir, 'graph_statistics.png')
-        plt.savefig(stats_path, dpi=150, bbox_inches='tight')
-        print(f"✓ Statistics plot saved to: {stats_path}")
-
-    print("\n🎉 All done! Check the results folder for visualizations!")
+        print(f"  {pdb_id}: {graph.x.shape} features")
+        print(f"  Sample features (first node): {graph.x[0][:10].tolist()}")
