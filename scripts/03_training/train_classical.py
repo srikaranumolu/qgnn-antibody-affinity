@@ -38,8 +38,18 @@ def evaluate(model, loader, device):
     for batch in loader:
         batch = batch.to(device)
         out = model(batch).squeeze(-1)
-        preds.extend(out.cpu().numpy().tolist())
-        trues.extend(batch.y.squeeze(-1).cpu().numpy().tolist())
+
+        # Handle both tensor and scalar labels
+        batch_preds = out.cpu().numpy()
+        batch_labels = batch.y.squeeze(-1).cpu().numpy()
+
+        # Convert to flat arrays first
+        batch_preds = np.atleast_1d(batch_preds)
+        batch_labels = np.atleast_1d(batch_labels)
+
+        # Now extend safely
+        preds.extend(batch_preds.tolist())
+        trues.extend(batch_labels.tolist())
 
     preds = np.array(preds)
     trues = np.array(trues)
@@ -128,6 +138,11 @@ def train():
 
             pred = model(batch).squeeze(-1)
             true = batch.y.squeeze(-1)
+
+            # Ensure both are 1D tensors to avoid broadcasting issues
+            pred = pred.view(-1)
+            true = true.view(-1)
+
             loss = criterion(pred, true)
 
             loss.backward()
@@ -138,12 +153,11 @@ def train():
         avg_loss = total_loss / len(train_loader)
         val_metrics = evaluate(model, val_loader, device)
 
-        # Print every 10 epochs
-        if epoch % 10 == 0 or epoch == 1:
-            print(f"      Epoch {epoch:03d}/{max_epochs} | "
-                  f"Train MSE: {avg_loss:.4f} | "
-                  f"Val RMSE: {val_metrics['rmse']:.4f} | "
-                  f"Val R: {val_metrics['pearson_r']:.4f}")
+        # Print every epoch now to see progress
+        print(f"      Epoch {epoch:03d}/{max_epochs} | "
+              f"Train MSE: {avg_loss:.4f} | "
+              f"Val RMSE: {val_metrics['rmse']:.4f} | "
+              f"Val R: {val_metrics['pearson_r']:.4f}")
 
         # Early stopping
         if val_metrics["rmse"] < best_val_rmse - 1e-6:

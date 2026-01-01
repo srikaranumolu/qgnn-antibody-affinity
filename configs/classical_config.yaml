@@ -1,12 +1,12 @@
 model:
-  input_dim: 6          # One-hot element encoding (C, N, O, S, P, Other)
-  hidden_dim: 128       # Increased from 64 for better capacity
+  input_dim: 41          # One-hot element encoding (C, N, O, S, P, Other)
+  hidden_dim: 256       # Increased from 64 for better capacity
   dropout: 0.3
   num_layers: 3
 
 training:
   batch_size: 16
-  lr: 0.001
+  lr: 0.0005
   max_epochs: 200
   patience: 20          # Early stopping
   weight_decay: 0.0001
