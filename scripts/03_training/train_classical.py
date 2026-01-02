@@ -92,6 +92,9 @@ def train():
 
     # Setup device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        print("GPU name:", torch.cuda.get_device_name(0))
+        print("GPU index:", torch.cuda.current_device())
     print(f"\n[1/6] Device: {device}")
 
     # Load datasets
