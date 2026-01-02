@@ -86,7 +86,7 @@ def train():
     print("=" * 70)
 
     # Load config
-    config_path = os.path.join(PROJECT_ROOT, "configs", "gat_config.yaml")
+    config_path = os.path.join(PROJECT_ROOT, "configs", "classical_config.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -155,7 +155,7 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = torch.nn.MSELoss()
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=10, verbose=True
+        optimizer, mode='min', factor=0.5, patience=10
     )
 
     # Baseline metrics

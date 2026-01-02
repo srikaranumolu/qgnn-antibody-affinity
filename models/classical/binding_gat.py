@@ -25,8 +25,8 @@ Date: January 2026
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATv2Conv, global_add_pool, GlobalAttention
-
+from torch_geometric.nn import GATv2Conv, global_add_pool
+from torch_geometric.nn.aggr import AttentionalAggregation
 
 class BindingAffinityGAT(nn.Module):
     """
@@ -89,7 +89,7 @@ class BindingAffinityGAT(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim // 2, 1)
         )
-        self.pool = GlobalAttention(gate_nn)
+        self.pool = AttentionalAggregation(gate_nn)
 
         # Fully connected layers for regression
         self.fc1 = nn.Linear(hidden_dim, 128)
