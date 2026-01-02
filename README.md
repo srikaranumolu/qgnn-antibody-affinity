@@ -1,4 +1,4 @@
-# RSEF-Quantum-Antibody-Binding
+# Quantum-Antibody-Binding
 
 Repository skeleton for the RSEF project: quantum and classical GNNs for antibody binding prediction.
 
