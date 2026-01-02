@@ -1,15 +1,15 @@
 model:
-  input_dim: 41          # One-hot element encoding (C, N, O, S, P, Other)
-  hidden_dim: 256       # Increased from 64 for better capacity
-  dropout: 0.3
-  num_layers: 3
+  input_dim: 49          # Enhanced features (41 + 8 new)
+  hidden_dim: 128        # Hidden dimension per attention head
+  num_heads: 8           # Number of attention heads
+  dropout: 0.2           # Dropout for regularization
 
 training:
-  batch_size: 16
-  lr: 0.0005
-  max_epochs: 200
-  patience: 20          # Early stopping
-  weight_decay: 0.0001
+  batch_size: 8          # Balanced for stability and memory
+  lr: 0.001              # Learning rate
+  max_epochs: 300        # More epochs for convergence
+  patience: 30           # Early stopping patience
+  weight_decay: 0.0001   # L2 regularization
 
 paths:
   train_csv: "data/splits/train.csv"
@@ -17,3 +17,11 @@ paths:
   test_csv: "data/splits/test.csv"
   save_dir: "results/models"
   metrics_dir: "results/metrics"
+
+# Architecture notes:
+# - GAT with 8 attention heads learns diverse interaction patterns
+# - Attention pooling focuses on binding site (~20 atoms out of 5000)
+# - 49D features include interface-specific information
+# - Batch size 8 provides stable gradients with limited data
+#
+# Expected performance: R = 0.55-0.70 (ISEF-worthy)

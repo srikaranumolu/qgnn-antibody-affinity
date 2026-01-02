@@ -1,4 +1,4 @@
-from models.classical.binding_gnn import BindingGNN
+from models.classical.binding_gat import BindingGNN
 
 def test_binding_gnn():
     m = BindingGNN()
