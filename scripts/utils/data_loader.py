@@ -30,7 +30,10 @@ class AntibodyAffinityDataset(Dataset):
         row = self.data.iloc[idx]
 
         # Load preprocessed graph
-        graph = torch.load(row['graph_path'], weights_only=False)  # Add this parameter
+        graph = torch.load(row['graph_path'], weights_only=False)
+
+        # ADD THE LABEL HERE (this was missing!)
+        graph.y = torch.tensor([row['pKd']], dtype=torch.float)
 
         # Add PDB ID for reference
         graph.pdb_id = row['PDB_ID']
